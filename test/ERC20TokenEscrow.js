@@ -284,9 +284,9 @@ contract('ERC20TokenEscrow - drain', function (accounts) {
 
 });
 
-contract(`ERC20TokenEscrow - send`, function (accounts) {
+contract(`ERC20TokenEscrow - close`, function (accounts) {
 
-    it(`must revert when _uponAgreedEther is not in contract`, async function () {
+    it(`close must revert when _uponAgreedEther is not in contract`, async function () {
 
         const creator = accounts[0];
         const tradePartner = accounts[1];
@@ -295,72 +295,85 @@ contract(`ERC20TokenEscrow - send`, function (accounts) {
             from: tradePartner,
         });
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, true)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, true, {})
             .then(async function (escrow) {
 
-                // pull ether out of contract -> this will cause send to revert
-                await escrow.drain();
-
                 try {
-                    await escrow.send.call({from: tradePartner})
+                    await escrow.close({from: tradePartner})
                 } catch (e) {
                     assert.equal("VM Exception while processing transaction: revert", e.message);
+                    return;
                 }
+
+                assert.fail("expected to revert");
 
             })
 
     });
 
-    it(`must revert when _uponAgreedTokens are not in the contract`, async function () {
+    it(`close revert when _uponAgreedTokens are not in the contract`, async function () {
 
         const tradePartner = accounts[1];
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
-                // pull tokens out of contract
-                await escrow.drain();
-
                 try {
-                    await escrow.send.call({from: tradePartner})
+                    await escrow.close({from: tradePartner})
                 } catch (e) {
                     assert.equal("VM Exception while processing transaction: revert", e.message);
+                    return;
                 }
+
+                assert.fail("expected to revert");
 
             })
 
     });
 
-    it(`must transfer ether to trade partner when he sends in tokens`, async function () {
+    it(`close must transfer ether to trade partner when he sends in tokens`, async function () {
 
-        const creator = [0];
+        const creator = accounts[0];
         const tradePartner = accounts[1];
 
         // the token sender is another address that will send in the
         const tokenSender = accounts[2];
-        const sampleToken = ERC20Token.new(10000, "TEST TOKEN", 2, "TT", {
+        const sampleToken = await ERC20Token.new(10000, "TEST TOKEN", 2, "TT", {
             from: tokenSender,
         });
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
                 const oldBalanceTradePartner = await web3.eth.getBalance(tradePartner);
 
-                await escrow.send.call({from: tokenSender});
+                await sampleToken.transfer(escrow.address, 50, {
+                    from: tokenSender
+                });
 
-                // should have no ether after send call
-                assert.equal(0, await web3.eth.getBalance(escrow.address));
+                let escrowEthBalance = await web3.eth.getBalance(escrow.address);
+                assert.equal(100, escrowEthBalance.toString());
+
+                let escrowTokenBalance = await sampleToken.balanceOf(escrow.address);
+                assert.equal(50, escrowTokenBalance.toString());
+
+                await escrow.close();
+
+                escrowEthBalance = await web3.eth.getBalance(escrow.address);
+                assert.equal(0, escrowEthBalance.toString());
+
+                escrowTokenBalance = await sampleToken.balanceOf(escrow.address);
+                assert.equal(0, escrowTokenBalance.toString());
 
                 // creator must now have 50 tokens more
-                const tokenBalanceCreator = await sampleToken.balance(creator);
-                assert.equal(50, tokenBalanceCreator.toString());
+                const tokenBalanceCreator = await sampleToken.balanceOf(creator);
+                assert.equal("50", tokenBalanceCreator.toString());
 
-                // creator must now have 100 tokens more
+                // trade partner must now have 100 wei more
                 const newBalanceTradePartner = await web3.eth.getBalance(tradePartner);
-                assert.equal(oldBalanceTradePartner.add(100).toString(), newBalanceTradePartner.toString())
+                assert.equal(oldBalanceTradePartner.plus(100).toString(), newBalanceTradePartner.toString())
 
             })
 
@@ -368,30 +381,36 @@ contract(`ERC20TokenEscrow - send`, function (accounts) {
 
     it(`must transfer tokens to trade partner when he sends in ether`, async function () {
 
-        const creator = [0];
+        const creator = accounts[0];
         const tradePartner = accounts[1];
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, true)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, true, {})
             .then(async function (escrow) {
 
+                const oldCreatorEthBalance = web3.eth.getBalance(creator);
+
+                // send in tokens to escrow
+                await sampleToken.transfer(escrow.address, 50);
+
                 // make sure contract has tokens
-                const tokenBalanceContract = await sampleToken.balance(escrow.address);
+                const tokenBalanceContract = await sampleToken.balanceOf(escrow.address);
                 assert.equal(50, tokenBalanceContract.toString());
 
-                await escrow.send.call({from: tradePartner});
+                await escrow.close({from: tradePartner, value: 100});
 
                 // escrow must have no ether after send call
-                assert.equal(0, await web3.eth.getBalance(escrow.address));
-
-                // creator must now have 100 wei more
-                const tokenBalanceCreator = await sampleToken.balance(creator);
-                assert.equal(50, tokenBalanceCreator.toString());
+                let b = await web3.eth.getBalance(escrow.address);
+                assert.equal("0", b.toString());
 
                 // trade partner must no have 50 tokens since he sent in the ether
-                const tradePartnerBalance = await sampleToken.balance(creator);
+                const tradePartnerBalance = await sampleToken.balanceOf(tradePartner);
                 assert.equal(50, tradePartnerBalance.toString());
+
+                // creator must now have 100 wei more
+                const creatorEthBalance = await web3.eth.getBalance(creator);
+                assert.equal(oldCreatorEthBalance.plus(100).toString(), creatorEthBalance.toString());
 
             })
 

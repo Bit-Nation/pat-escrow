@@ -81,10 +81,7 @@ contract ERC20TokenEscrow {
     }
 
     modifier mustHaveCounterValue() {
-        if (true == wantEther) {
-            require(tradedToken.balanceOf(this) == uponAgreedTokens);
-            _;
-        }
+        require(tradedToken.balanceOf(this) >= uponAgreedTokens);
         require(address(this).balance == uponAgreedEther);
         _;
     }
@@ -101,7 +98,7 @@ contract ERC20TokenEscrow {
 
     }
 
-    function send() mustHaveCounterValue payable public {
+    function close() mustHaveCounterValue payable public {
 
         if (true == wantEther) {
             // send ether to creator
