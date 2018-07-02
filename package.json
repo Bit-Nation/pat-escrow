@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "truffle test",
+    "rpc:start": "ganache-cli --port=8098 --networkId=84893"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "bluebird": "^3.5.1",
+    "ganache-cli": "^6.1.4",
     "lodash": "^4.17.10"
   }
 }

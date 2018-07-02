@@ -1,7 +1,7 @@
 const ERC20TokenEscrow = artifacts.require("./ERC20TokenEscrow.sol");
 const ERC20Token = artifacts.require("./ERC20Token.sol");
 
-const tokenFactory = () => ERC20Token.New(10000, "TEST TOKEN", 2, "TT");
+const tokenFactory = () => ERC20Token.new(10000, "TEST TOKEN", 2, "TT");
 const escrowFactory = (tokenAddress, ether, tokens, tradePartner, wantEther) => ERC20TokenEscrow.new(sampleToken.address, 100, 0, tradePartner, wantEther);
 
 const assertEvent = (contract, filter) => {
@@ -315,7 +315,7 @@ contract(`ERC20TokenEscrow - send`, function (accounts) {
         const creator = accounts[0];
         const tradePartner = accounts[1];
 
-        const sampleToken = ERC20Token.New(10000, "TEST TOKEN", 2, "TT", {
+        const sampleToken = ERC20Token.new(10000, "TEST TOKEN", 2, "TT", {
             from: tradePartner,
         });
 
@@ -364,7 +364,7 @@ contract(`ERC20TokenEscrow - send`, function (accounts) {
 
         // the token sender is another address that will send in the
         const tokenSender = accounts[2];
-        const sampleToken = ERC20Token.New(10000, "TEST TOKEN", 2, "TT", {
+        const sampleToken = ERC20Token.new(10000, "TEST TOKEN", 2, "TT", {
             from: tokenSender,
         });
 
