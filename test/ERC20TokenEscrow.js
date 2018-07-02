@@ -2,7 +2,7 @@ const ERC20TokenEscrow = artifacts.require("./ERC20TokenEscrow.sol");
 const ERC20Token = artifacts.require("./ERC20Token.sol");
 
 const tokenFactory = () => ERC20Token.new(10000, "TEST TOKEN", 2, "TT");
-const escrowFactory = (tokenAddress, ether, tokens, tradePartner, wantEther) => ERC20TokenEscrow.new(sampleToken.address, 100, 0, tradePartner, wantEther);
+const escrowFactory = (tokenAddress, ether, tokens, tradePartner, wantEther, params) => ERC20TokenEscrow.new(tokenAddress, ether, tokens, tradePartner, wantEther, params || null);
 
 const assertEvent = (contract, filter) => {
     return new Promise((resolve, reject) => {
@@ -28,10 +28,10 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
-                assert.equal(creator, escrow.creator);
+                assert.equal(creator, await escrow.creator());
 
             });
 
@@ -43,10 +43,10 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
-                assert.equal(sampleToken.address, escrow.tradedToken);
+                assert.equal(sampleToken.address, await escrow.tradedToken());
 
             });
     });
@@ -57,10 +57,10 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
-                assert.equal(tradePartner, escrow.tradePartner);
+                assert.equal(tradePartner, await escrow.tradePartner());
 
             });
     });
@@ -71,10 +71,10 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
-                assert.equal(100, escrow.uponAgreedEther);
+                assert.equal(100, await escrow.uponAgreedEther());
 
             });
     });
@@ -85,20 +85,20 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
-                assert.equal(50, escrow.uponAgreedTokens);
+                assert.equal(50, await escrow.uponAgreedTokens());
 
             });
     });
 
-    it(`must throw if creator has not enough ether`, async function () {
+    it(`must throw if creator doesn't send enough ether`, async function () {
         const tradePartner = accounts[1];
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 40})
             .then(async function (escrow) {
 
                 // contract deploy should fail since the creator need to have enough ether
@@ -115,7 +115,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return ERC20TokenEscrow.new(sampleToken.address, 100, 50, tradePartner, false, {from: accounts[4]})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {from: accounts[4]})
             .then(async function (escrow) {
 
                 // contract deploy should fail since the creator need to have enough ether
@@ -132,7 +132,19 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        await escrowFactory(sampleToken.address, 0, 0, tradePartner, false)
+        await escrowFactory(sampleToken.address, 0, 0, tradePartner, false, {value: 1})
+            .then(async function (escrow) {
+
+                // contract deploy should fail since the creator need to have enough ether
+                assert.fail(`didn't fail to deploy contract`)
+
+            })
+            .catch(function (e) {
+                // expect to revert since token & ether amount is invalid
+                assert.equal("VM Exception while processing transaction: revert", e.message);
+            });
+
+        await escrowFactory(sampleToken.address, 1, 0, tradePartner, false, {value: 1})
             .then(async function (escrow) {
 
                 // contract deploy should fail since the creator need to have enough ether
@@ -144,19 +156,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
                 assert.equal("VM Exception while processing transaction: revert", e.message);
             });
 
-        await escrowFactory(sampleToken.address, 1, 0, tradePartner, false)
-            .then(async function (escrow) {
-
-                // contract deploy should fail since the creator need to have enough ether
-                assert.fail(`didn't fail to deploy contract`)
-
-            })
-            .catch(async function (e) {
-                // expect to revert since token & ether amount is invalid
-                assert.equal("VM Exception while processing transaction: revert", e.message);
-            });
-
-        await escrowFactory(sampleToken.address, 0, 1, tradePartner, false)
+        await escrowFactory(sampleToken.address, 0, 1, tradePartner, false, {value: 1})
             .then(async function (escrow) {
 
                 // contract deploy should fail since the creator need to have enough ether
@@ -176,7 +176,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        await escrowFactory(sampleToken.address, 100, 50, tradePartner, false)
+        await escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
             .then(async function (escrow) {
 
                 // eth balance must be 100 wei
@@ -184,37 +184,11 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
                 assert.equal(`100`, escrowETHBalance);
 
                 // token balance must be 0 since a creator can not send ether and tokens
-                const escrowTokenBalance = await sampleToken.balance(escrow.address);
+                const escrowTokenBalance = await sampleToken.balanceOf(escrow.address);
                 assert.equal(`0`, escrowTokenBalance);
 
             })
     });
-
-    it(`must send _uponAgreedTokens to contract`, async function () {
-
-        const tradePartner = accounts[1];
-
-        const sampleToken = await tokenFactory();
-
-        // make sure creator has tokens
-        let creatorTokenBalance = await sampleToken.balance(accounts[0]);
-        assert.equal(`100000`, creatorTokenBalance);
-
-        await escrowFactory(sampleToken.address, 100, 50, tradePartner, true)
-            .then(async function (escrow) {
-
-                // make sure escrow has no ether since we should send in tokens
-                // and creator can't send tokens & ether
-                const escrowBalance = await web3.eth.getBalance(escrow.address);
-                assert.equal(`0`, escrowBalance);
-
-                // token balance must be 50 since the creator send in tokens
-                const escrowTokenBalance = await sampleToken.balance(escrow.address);
-                assert.equal(`50`, escrowTokenBalance);
-
-            })
-
-    })
 
 });
 

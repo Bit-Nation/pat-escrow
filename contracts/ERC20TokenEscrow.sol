@@ -60,14 +60,8 @@ contract ERC20TokenEscrow {
         require(_uponAgreedEther > 0);
         require(_uponAgreedTokens > 0);
 
-        // send tokens from creator to this contract
-        // since he want ether he must offer the tokens in exchange
-        if (true == wantEther) {
-            require(tradedToken.transfer(this, _uponAgreedTokens));
-            return;
-        } else {
-            // in the case creator wants to buy token
-            // he must send the uponAgreedEther
+        // make sure sender send enouth ether if we want to buy tokens
+        if (false == wantEther) {
             require(msg.value == _uponAgreedEther);
         }
 
