@@ -389,10 +389,10 @@ contract(`ERC20TokenEscrow - close`, function (accounts) {
         return escrowFactory(sampleToken.address, 100, 50, tradePartner, true, {})
             .then(async function (escrow) {
 
-                const oldCreatorEthBalance = web3.eth.getBalance(creator);
-
                 // send in tokens to escrow
                 await sampleToken.transfer(escrow.address, 50);
+
+                const oldCreatorEthBalance = web3.eth.getBalance(creator);
 
                 // make sure contract has tokens
                 const tokenBalanceContract = await sampleToken.balanceOf(escrow.address);
