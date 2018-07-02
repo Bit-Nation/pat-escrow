@@ -61,7 +61,7 @@ contract ERC20TokenEscrow {
         require(_uponAgreedTokens > 0);
 
         // make sure sender send enouth ether if we want to buy tokens
-        if (false == wantEther) {
+        if (false == _wantEther) {
             require(msg.value == _uponAgreedEther);
         }
 

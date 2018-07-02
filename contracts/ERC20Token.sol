@@ -1,4 +1,5 @@
 // Took it from here: https://github.com/ConsenSys/Tokens
+// changed it a bit
 pragma solidity ^0.4.21;
 
 contract EIP20Interface {
@@ -62,7 +63,7 @@ contract ERC20Token is EIP20Interface {
     uint8 public decimals;                //How many decimals to show.
     string public symbol;                 //An identifier: eg SBX
 
-    function EIP20(
+    function ERC20Token(
         uint256 _initialAmount,
         string _tokenName,
         uint8 _decimalUnits,
