@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "truffle test",
-    "rpc:start": "ganache-cli --port=8098 --networkId=84893"
+    "rpc:start": "ganache-cli --port=8098 --networkId=84893",
+    "compile": "truffle compile"
   },
   "keywords": [],
   "author": "",
