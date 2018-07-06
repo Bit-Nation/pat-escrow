@@ -53,17 +53,14 @@ contract ERC20TokenEscrow {
     uint256 public uponAgreedTokens;
     address public creator;
     address public tradePartner;
-    bool public wantEther;
 
-    constructor(EIP20Interface _tradedToken, uint256 _uponAgreedEther, uint256 _uponAgreedTokens, address _tradePartner, bool _wantEther) payable public {
+    constructor(EIP20Interface _tradedToken, uint256 _uponAgreedEther, uint256 _uponAgreedTokens, address _tradePartner) payable public {
 
         require(_uponAgreedEther > 0);
         require(_uponAgreedTokens > 0);
 
         // make sure sender send enouth ether if we want to buy tokens
-        if (false == _wantEther) {
-            require(msg.value == _uponAgreedEther);
-        }
+        require(msg.value == _uponAgreedEther);
 
         // state initialisation
         tradedToken = _tradedToken;
@@ -71,46 +68,29 @@ contract ERC20TokenEscrow {
         uponAgreedTokens = _uponAgreedTokens;
         creator = msg.sender;
         tradePartner = _tradePartner;
-        wantEther = _wantEther;
 
     }
 
-    modifier onlyCreator() {
-        require(msg.sender == creator);
+    modifier onlyTrader() {
+        require(msg.sender == creator || msg.sender == tradePartner);
         _;
     }
 
-    modifier mustHaveCounterValue() {
-        require(tradedToken.balanceOf(this) >= uponAgreedTokens);
-        require(address(this).balance == uponAgreedEther);
-        _;
-    }
-
-    // drain the value for this contract
-    function drain() onlyCreator public {
-
-        if (true == wantEther) {
-            require(tradedToken.transfer(creator, tradedToken.balanceOf(address(this))));
-            return;
-        }
-
+    function drain() onlyTrader public {
+        // send tokens back to trade partner
+        require(tradedToken.transfer(tradePartner, tradedToken.balanceOf(this)));
+        // send ether back to creator
         creator.transfer(address(this).balance);
-
     }
 
-    function close() mustHaveCounterValue payable public {
+    function withdrawal() public {
 
-        if (true == wantEther) {
-            // send ether to creator
-            creator.transfer(address(this).balance);
-            // send balance of escrow to trade partner
-            require(tradedToken.transfer(tradePartner, tradedToken.balanceOf(this)));
-            return;
-        }
+        require(address(this).balance == uponAgreedEther);
+        require(tradedToken.balanceOf(address(this)) >= uponAgreedTokens);
 
         // send ether to trade partner
         tradePartner.transfer(address(this).balance);
-        // send tokens to trade partner
+        // send tokens to creator partner
         require(tradedToken.transfer(creator, tradedToken.balanceOf(this)));
 
     }

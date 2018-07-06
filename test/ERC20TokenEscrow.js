@@ -2,7 +2,7 @@ const ERC20TokenEscrow = artifacts.require("./ERC20TokenEscrow.sol");
 const ERC20Token = artifacts.require("./ERC20Token.sol");
 
 const tokenFactory = () => ERC20Token.new(10000, "TEST TOKEN", 2, "TT");
-const escrowFactory = (tokenAddress, ether, tokens, tradePartner, wantEther, params) => ERC20TokenEscrow.new(tokenAddress, ether, tokens, tradePartner, wantEther, params || null);
+const escrowFactory = (tokenAddress, ether, tokens, tradePartner, params) => ERC20TokenEscrow.new(tokenAddress, ether, tokens, tradePartner, params || null);
 
 const assertEvent = (contract, filter) => {
     return new Promise((resolve, reject) => {
@@ -28,7 +28,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 assert.equal(creator, await escrow.creator());
@@ -43,7 +43,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 assert.equal(sampleToken.address, await escrow.tradedToken());
@@ -57,7 +57,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 assert.equal(tradePartner, await escrow.tradePartner());
@@ -71,7 +71,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 assert.equal(100, await escrow.uponAgreedEther());
@@ -85,7 +85,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 assert.equal(50, await escrow.uponAgreedTokens());
@@ -98,24 +98,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 40})
-            .then(async function (escrow) {
-
-                // contract deploy should fail since the creator need to have enough ether
-                assert.fail(`didn't fail to deploy contract`)
-
-            })
-            .catch(async function (e) {
-                assert.equal("VM Exception while processing transaction: revert", e.message);
-            })
-    });
-
-    it('must throw if creator has not enough tokens', async function () {
-        const tradePartner = accounts[1];
-
-        const sampleToken = await tokenFactory();
-
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {from: accounts[4]})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 40})
             .then(async function (escrow) {
 
                 // contract deploy should fail since the creator need to have enough ether
@@ -133,7 +116,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
         const sampleToken = await tokenFactory();
 
         return Promise.all([
-            escrowFactory(sampleToken.address, 0, 0, tradePartner, false, {value: 1})
+            escrowFactory(sampleToken.address, 0, 0, tradePartner, {value: 1})
                 .then(async function (escrow) {
 
                     // contract deploy should fail since the creator need to have enough ether
@@ -144,7 +127,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
                     // expect to revert since token & ether amount is invalid
                     assert.equal("VM Exception while processing transaction: revert", e.message);
                 }),
-            escrowFactory(sampleToken.address, 1, 0, tradePartner, false, {value: 1})
+            escrowFactory(sampleToken.address, 1, 0, tradePartner, {value: 1})
                 .then(async function (escrow) {
 
                     // contract deploy should fail since the creator need to have enough ether
@@ -155,7 +138,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
                     // expect to revert since token & ether amount is invalid
                     assert.equal("VM Exception while processing transaction: revert", e.message);
                 }),
-            escrowFactory(sampleToken.address, 0, 1, tradePartner, false, {value: 1})
+            escrowFactory(sampleToken.address, 0, 1, tradePartner, {value: 1})
                 .then(async function (escrow) {
 
                     // contract deploy should fail since the creator need to have enough ether
@@ -176,7 +159,7 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 
         const sampleToken = await tokenFactory();
 
-        await escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        await escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 // eth balance must be 100 wei
@@ -196,47 +179,21 @@ contract('ERC20TokenEscrow - constructor', function (accounts) {
 // form a escrow.
 contract('ERC20TokenEscrow - drain', function (accounts) {
 
-    it(`must only be callable by creator`, async function () {
+    it(`must send values back to sender`, async function () {
 
         const creator = accounts[0];
         const tradePartner = accounts[1];
 
         const sampleToken = await tokenFactory();
 
-        let escrowContract = await escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100});
-        await escrowContract.drain();
-
-        // must not be callable by trade partner
-        escrowContract = await escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100});
-        try {
-            await escrowContract.drain.call({
-                from: tradePartner
-            });
-        } catch (e) {
-            assert.equal("VM Exception while processing transaction: revert", e.message);
-        }
-
-        // must not be callable by random address
-        escrowContract = await escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100});
-        try {
-            await escrowContract.drain.call({
-                from: accounts[7]
-            });
-        } catch(e){
-            assert.equal("VM Exception while processing transaction: revert", e.message);
-        }
-
-    });
-
-    it(`must send ether held by contract back to creator`, async function () {
-
-        const creator = accounts[0];
-        const tradePartner = accounts[1];
-
-        const sampleToken = await tokenFactory();
-
-        return escrowFactory(sampleToken.address, '1000000000000000000', 50, tradePartner, false, {value: '1000000000000000000'})
+        return escrowFactory(sampleToken.address, '1000000000000000000', 50, tradePartner, {value: '1000000000000000000'})
             .then(async function (escrow) {
+
+                // send tokens to escrow
+                await sampleToken.transfer(escrow.address, '333');
+
+                // make sure escrow has tokens
+                assert.equal('333', await sampleToken.balanceOf(escrow.address));
 
                 const oldBalanceCreator = await web3.eth.getBalance(creator);
 
@@ -247,81 +204,36 @@ contract('ERC20TokenEscrow - drain', function (accounts) {
                 // after drain the creator should have ~one ether more
                 assert.isTrue(newBalanceCreator.gt(oldBalanceCreator));
 
+                // after drain the trade parter should have his tokens back
+                const b = await sampleToken.balanceOf(tradePartner);
+                assert.equal('333', b.toString());
+
+                // make sure that there is nothing left in escrow contract
                 const balanceEscrow = await web3.eth.getBalance(escrow.address);
-                assert.equal("0", balanceEscrow.toString())
+                assert.equal("0", balanceEscrow.toString());
+                assert.equal('0', await sampleToken.balanceOf(escrow.address));
 
             })
-    });
-
-    it(`must send tokens held by contract back to creator`, async function () {
-
-        const creator = accounts[0];
-        const tradePartner = accounts[1];
-
-        const sampleToken = await ERC20Token.new(10000, "TEST TOKEN", 18, "TT");
-
-        return ERC20TokenEscrow.new(sampleToken.address, 100, 50, tradePartner, true)
-            .then(async function (escrow) {
-
-                // send tokens to contract
-                await sampleToken.transfer(escrow.address, 50, {
-                    from: creator
-                });
-
-                // escrow balance should be 50 tokens
-                const tokenBalanceEscrow = await sampleToken.balanceOf(escrow.address);
-                assert.equal("50", tokenBalanceEscrow.toString());
-
-                await escrow.drain();
-
-                const creatorTokenBalance = await sampleToken.balanceOf(creator);
-
-                assert.equal("10000", creatorTokenBalance.toString())
-
-            })
-
-    });
+    })
 
 });
 
-contract(`ERC20TokenEscrow - close`, function (accounts) {
+contract(`ERC20TokenEscrow - withdrawal`, function (accounts) {
 
-    it(`close must revert when _uponAgreedEther is not in contract`, async function () {
-
-        const creator = accounts[0];
-        const tradePartner = accounts[1];
-
-        const sampleToken = ERC20Token.new(10000, "TEST TOKEN", 2, "TT", {
-            from: tradePartner,
-        });
-
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, true, {})
-            .then(async function (escrow) {
-
-                try {
-                    await escrow.close({from: tradePartner})
-                } catch (e) {
-                    assert.equal("VM Exception while processing transaction: revert", e.message);
-                    return;
-                }
-
-                assert.fail("expected to revert");
-
-            })
-
-    });
-
-    it(`close revert when _uponAgreedTokens are not in the contract`, async function () {
+    it(`withdrawal must revert when _uponAgreedEther is not in contract`, async function () {
 
         const tradePartner = accounts[1];
 
         const sampleToken = await tokenFactory();
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
+                // pull ether out of contract
+                await escrow.drain();
+
                 try {
-                    await escrow.close({from: tradePartner})
+                    await escrow.withdrawal({from: tradePartner})
                 } catch (e) {
                     assert.equal("VM Exception while processing transaction: revert", e.message);
                     return;
@@ -333,7 +245,29 @@ contract(`ERC20TokenEscrow - close`, function (accounts) {
 
     });
 
-    it(`close must transfer ether to trade partner when he sends in tokens`, async function () {
+    it(`withdrawal must revert when _uponAgreedTokens are not in the contract`, async function () {
+
+        const tradePartner = accounts[1];
+
+        const sampleToken = await tokenFactory();
+
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
+            .then(async function (escrow) {
+
+                try {
+                    await escrow.withdrawal({from: tradePartner})
+                } catch (e) {
+                    assert.equal("VM Exception while processing transaction: revert", e.message);
+                    return;
+                }
+
+                assert.fail("expected to revert");
+
+            })
+
+    });
+
+    it(`withdrawal must release ether to tradePartner and tokens to creator`, async function () {
 
         const creator = accounts[0];
         const tradePartner = accounts[1];
@@ -344,7 +278,7 @@ contract(`ERC20TokenEscrow - close`, function (accounts) {
             from: tokenSender,
         });
 
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, false, {value: 100})
+        return escrowFactory(sampleToken.address, 100, 50, tradePartner, {value: 100})
             .then(async function (escrow) {
 
                 const oldBalanceTradePartner = await web3.eth.getBalance(tradePartner);
@@ -359,7 +293,7 @@ contract(`ERC20TokenEscrow - close`, function (accounts) {
                 let escrowTokenBalance = await sampleToken.balanceOf(escrow.address);
                 assert.equal(50, escrowTokenBalance.toString());
 
-                await escrow.close();
+                await escrow.withdrawal();
 
                 escrowEthBalance = await web3.eth.getBalance(escrow.address);
                 assert.equal(0, escrowEthBalance.toString());
@@ -374,43 +308,6 @@ contract(`ERC20TokenEscrow - close`, function (accounts) {
                 // trade partner must now have 100 wei more
                 const newBalanceTradePartner = await web3.eth.getBalance(tradePartner);
                 assert.equal(oldBalanceTradePartner.plus(100).toString(), newBalanceTradePartner.toString())
-
-            })
-
-    });
-
-    it(`must transfer tokens to trade partner when he sends in ether`, async function () {
-
-        const creator = accounts[0];
-        const tradePartner = accounts[1];
-
-        const sampleToken = await tokenFactory();
-
-        return escrowFactory(sampleToken.address, 100, 50, tradePartner, true, {})
-            .then(async function (escrow) {
-
-                // send in tokens to escrow
-                await sampleToken.transfer(escrow.address, 50);
-
-                const oldCreatorEthBalance = web3.eth.getBalance(creator);
-
-                // make sure contract has tokens
-                const tokenBalanceContract = await sampleToken.balanceOf(escrow.address);
-                assert.equal(50, tokenBalanceContract.toString());
-
-                await escrow.close({from: tradePartner, value: 100});
-
-                // escrow must have no ether after send call
-                let b = await web3.eth.getBalance(escrow.address);
-                assert.equal("0", b.toString());
-
-                // trade partner must no have 50 tokens since he sent in the ether
-                const tradePartnerBalance = await sampleToken.balanceOf(tradePartner);
-                assert.equal(50, tradePartnerBalance.toString());
-
-                // creator must now have 100 wei more
-                const creatorEthBalance = await web3.eth.getBalance(creator);
-                assert.equal(oldCreatorEthBalance.plus(100).toString(), creatorEthBalance.toString());
 
             })
 
