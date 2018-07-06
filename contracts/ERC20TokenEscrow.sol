@@ -53,6 +53,7 @@ contract ERC20TokenEscrow {
     uint256 public uponAgreedTokens;
     address public creator;
     address public tradePartner;
+    bool    public withdrawled;
 
     constructor(EIP20Interface _tradedToken, uint256 _uponAgreedEther, uint256 _uponAgreedTokens, address _tradePartner) payable public {
 
@@ -68,6 +69,7 @@ contract ERC20TokenEscrow {
         uponAgreedTokens = _uponAgreedTokens;
         creator = msg.sender;
         tradePartner = _tradePartner;
+        withdrawled = false;
 
     }
 
@@ -93,6 +95,7 @@ contract ERC20TokenEscrow {
         // send tokens to creator partner
         require(tradedToken.transfer(creator, tradedToken.balanceOf(this)));
 
+        withdrawled = true;
     }
 
 }
